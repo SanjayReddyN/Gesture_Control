@@ -14,7 +14,8 @@ import mediapipe as mp
 from utils import CvFpsCalc
 from model import KeyPointClassifier
 from model import PointHistoryClassifier
-
+import pyautogui
+import time
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -41,7 +42,7 @@ def get_args():
 def main():
     # Argument parsing #################################################################
     args = get_args()
-
+    last_mouse_command_time = time.time()
     cap_device = args.device
     cap_width = args.width
     cap_height = args.height
@@ -120,7 +121,6 @@ def main():
         image.flags.writeable = False
         results = hands.process(image)
         image.flags.writeable = True
-
         #  ####################################################################
         if results.multi_hand_landmarks is not None:
             for hand_landmarks, handedness in zip(results.multi_hand_landmarks,
@@ -161,6 +161,14 @@ def main():
                 # Drawing part
                 debug_image = draw_bounding_rect(use_brect, debug_image, brect)
                 debug_image = draw_landmarks(debug_image, landmark_list)
+                
+                current_time = time.time()  # Get the current time
+                if current_time - last_mouse_command_time >= 0.2:  # Check if 100ms has passed
+                    last_mouse_command_time = current_time  # Update the last mouse command time
+                    # Move the mouse cursor to the specified coordinates
+                    middle_finger_base_coords = tuple(landmark_list[9])
+                    pyautogui.moveTo(*middle_finger_base_coords)
+
                 debug_image = draw_info_text(
                     debug_image,
                     brect,
@@ -168,6 +176,7 @@ def main():
                     keypoint_classifier_labels[hand_sign_id],
                     point_history_classifier_labels[most_common_fg_id[0][0]],
                 )
+
         else:
             point_history.append([0, 0])
 
@@ -333,7 +342,7 @@ def draw_landmarks(image, landmark_point):
                 (0, 0, 0), 6)
         cv.line(image, tuple(landmark_point[11]), tuple(landmark_point[12]),
                 (255, 255, 255), 2)
-
+        
         # Ring finger
         cv.line(image, tuple(landmark_point[13]), tuple(landmark_point[14]),
                 (0, 0, 0), 6)
